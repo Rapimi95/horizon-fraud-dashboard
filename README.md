@@ -2,6 +2,10 @@
 
 Emergency fraud monitoring dashboard for Horizon Logistics' risk operations team, built to detect and investigate a coordinated fraud attack that spiked fraud rates from 0.8% to 14.2%.
 
+## Demo
+
+[Screen Recording - Dashboard Walkthrough](https://drive.google.com/file/d/1EiJJRZJyvuHeefo-X9YHnTKBeh_38IjD/view?usp=drive_link)
+
 ## Quick Start
 
 ```bash
