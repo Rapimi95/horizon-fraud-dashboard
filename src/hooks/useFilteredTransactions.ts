@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import { Transaction, FilterState, TransactionStatus } from '@/lib/types';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { Transaction, FilterState, TransactionStatus, RiskLevel } from '@/lib/types';
 import { filterTransactions } from '@/lib/fraud-detection';
 
 export function useFilteredTransactions(transactions: Transaction[]) {
@@ -12,39 +12,67 @@ export function useFilteredTransactions(transactions: Transaction[]) {
     [transactions, filters]
   );
 
-  const setIpFilter = useCallback((ip: string | undefined) => {
-    setFilters((prev) => ({ ...prev, selectedIp: ip }));
-  }, []);
-
-  const setEmailFilter = useCallback((email: string | undefined) => {
-    setFilters((prev) => ({ ...prev, selectedEmail: email }));
-  }, []);
-
-  const setBinFilter = useCallback((bin: string | undefined) => {
-    setFilters((prev) => ({ ...prev, selectedBin: bin }));
-  }, []);
-
-  const setCountryFilter = useCallback((country: string | undefined) => {
-    setFilters((prev) => ({ ...prev, selectedCountry: country }));
-  }, []);
-
-  const setHourFilter = useCallback((hour: number | undefined) => {
-    setFilters((prev) => ({ ...prev, selectedHour: hour }));
-  }, []);
-
-  const setRiskLevelFilter = useCallback(
-    (riskLevel: 'low' | 'medium' | 'high' | 'critical' | undefined) => {
-      setFilters((prev) => ({ ...prev, riskLevel }));
+  // Generic filter setter
+  const setFilter = useCallback(
+    (update: Partial<FilterState>) => {
+      setFilters((prev) => ({ ...prev, ...update }));
     },
     []
   );
 
-  const setStatusFilter = useCallback((status: TransactionStatus | undefined) => {
-    setFilters((prev) => ({ ...prev, status }));
-  }, []);
+  const setIpFilter = useCallback(
+    (ip: string | undefined) => setFilter({ selectedIp: ip }),
+    [setFilter]
+  );
+
+  const setEmailFilter = useCallback(
+    (email: string | undefined) => setFilter({ selectedEmail: email }),
+    [setFilter]
+  );
+
+  const setBinFilter = useCallback(
+    (bin: string | undefined) => setFilter({ selectedBin: bin }),
+    [setFilter]
+  );
+
+  const setCountryFilter = useCallback(
+    (country: string | undefined) => setFilter({ selectedCountry: country }),
+    [setFilter]
+  );
+
+  const setHourFilter = useCallback(
+    (hour: number | undefined) => setFilter({ selectedHour: hour }),
+    [setFilter]
+  );
+
+  const setRiskLevelFilter = useCallback(
+    (riskLevel: RiskLevel | undefined) => setFilter({ riskLevel }),
+    [setFilter]
+  );
+
+  const setStatusFilter = useCallback(
+    (status: TransactionStatus | undefined) => setFilter({ status }),
+    [setFilter]
+  );
+
+  // Debounced search query setter
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const setSearchQuery = useCallback((searchQuery: string | undefined) => {
-    setFilters((prev) => ({ ...prev, searchQuery }));
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      setFilter({ searchQuery });
+    }, 300);
+  }, [setFilter]);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
   }, []);
 
   const clearFilters = useCallback(() => {

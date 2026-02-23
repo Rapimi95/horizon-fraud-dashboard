@@ -4,6 +4,7 @@ import {
   VelocityEntry,
   GeoRiskEntry,
   FilterState,
+  RiskLevel,
 } from './types';
 
 // ============================================================================
@@ -100,7 +101,7 @@ export function computeVelocityData(transactions: Transaction[]): VelocityEntry[
     binMap.get(tx.cardBin)!.push(tx);
   }
 
-  function getRiskLevel(count: number): 'low' | 'medium' | 'high' | 'critical' {
+  function getRiskLevel(count: number): RiskLevel {
     if (count >= 10) return 'critical';
     if (count >= 5) return 'high';
     if (count >= 3) return 'medium';
@@ -112,7 +113,7 @@ export function computeVelocityData(transactions: Transaction[]): VelocityEntry[
     type: 'ip' | 'email' | 'bin'
   ): VelocityEntry[] {
     const entries: VelocityEntry[] = [];
-    Array.from(map.entries()).forEach(([key, txns]) => {
+    for (const [key, txns] of map) {
       const uniqueCards = new Set(txns.map((tx) => `${tx.cardBin}-${tx.cardLast4}`)).size;
       const countries = Array.from(new Set(txns.flatMap((tx) => [tx.billingCountry, tx.shippingCountry, tx.ipCountry])));
       const totalAmount = txns.reduce((sum, tx) => sum + tx.amount, 0);
@@ -126,7 +127,7 @@ export function computeVelocityData(transactions: Transaction[]): VelocityEntry[
         countries,
         riskLevel: getRiskLevel(txns.length),
       });
-    });
+    }
     return entries;
   }
 
@@ -179,7 +180,7 @@ export function computeGeoRiskData(transactions: Transaction[]): GeoRiskEntry[] 
   }
 
   const entries: GeoRiskEntry[] = Array.from(geoMap.values()).map((entry) => {
-    let riskLevel: 'low' | 'medium' | 'high' | 'critical';
+    let riskLevel: RiskLevel;
     const score = entry.count * (entry.mismatch ? 3 : 1);
     if (score >= 15) riskLevel = 'critical';
     else if (score >= 8) riskLevel = 'high';
@@ -227,10 +228,6 @@ export function getAmountDistribution(
         }
         break;
       }
-    }
-    // Handle exact $1000+ boundary
-    if (tx.amount >= 1000) {
-      // Already handled by the $1000+ bucket with max: Infinity
     }
   }
 
@@ -407,7 +404,7 @@ export function filterTransactions(
 // ============================================================================
 // Helper
 // ============================================================================
-function getRiskLevelFromScore(score: number): 'low' | 'medium' | 'high' | 'critical' {
+function getRiskLevelFromScore(score: number): RiskLevel {
   if (score >= 80) return 'critical';
   if (score >= 60) return 'high';
   if (score >= 40) return 'medium';

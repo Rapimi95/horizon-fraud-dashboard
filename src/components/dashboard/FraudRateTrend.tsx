@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import { memo, useCallback } from 'react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -19,6 +19,34 @@ interface FraudRateTrendProps {
   onHourClick?: (hour: number) => void;
 }
 
+const CHART_MARGIN = { top: 8, right: 8, left: 0, bottom: 0 };
+const AXIS_TICK_STYLE = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
+const AXIS_LINE_STYLE = { stroke: 'hsl(var(--border))' };
+const RATE_DOT_STYLE = {
+  r: 3,
+  fill: 'hsl(var(--background))',
+  stroke: '#ef4444',
+  strokeWidth: 2,
+};
+const RATE_ACTIVE_DOT_STYLE = {
+  r: 5,
+  fill: '#ef4444',
+  stroke: 'hsl(var(--background))',
+  strokeWidth: 2,
+};
+const TOOLTIP_CURSOR_STYLE = {
+  stroke: 'hsl(var(--muted-foreground))',
+  strokeWidth: 1,
+  strokeDasharray: '4 4',
+};
+const REFERENCE_LABEL = {
+  value: '2% threshold',
+  position: 'insideTopRight' as const,
+  fill: '#ef4444',
+  fontSize: 11,
+  fontWeight: 500,
+};
+
 function formatHour(hour: number): string {
   return `${hour.toString().padStart(2, '0')}:00`;
 }
@@ -33,7 +61,7 @@ interface CustomTooltipProps {
   label?: number;
 }
 
-function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
+function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (!active || !payload || payload.length === 0) return null;
 
   const data = payload[0].payload;
@@ -73,7 +101,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   );
 }
 
-export function FraudRateTrend({ data, onHourClick }: FraudRateTrendProps) {
+export const FraudRateTrend = memo(function FraudRateTrend({ data, onHourClick }: FraudRateTrendProps) {
   const handleChartClick: CategoricalChartFunc = useCallback(
     (nextState) => {
       if (!onHourClick) return;
@@ -103,7 +131,7 @@ export function FraudRateTrend({ data, onHourClick }: FraudRateTrendProps) {
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={data}
-              margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+              margin={CHART_MARGIN}
               onClick={handleChartClick}
               style={{ cursor: onHourClick ? 'pointer' : 'default' }}
             >
@@ -137,8 +165,8 @@ export function FraudRateTrend({ data, onHourClick }: FraudRateTrendProps) {
               <XAxis
                 dataKey="hour"
                 tickFormatter={formatHour}
-                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                axisLine={{ stroke: 'hsl(var(--border))' }}
+                tick={AXIS_TICK_STYLE}
+                axisLine={AXIS_LINE_STYLE}
                 tickLine={false}
                 interval={2}
               />
@@ -149,7 +177,7 @@ export function FraudRateTrend({ data, onHourClick }: FraudRateTrendProps) {
                 orientation="left"
                 domain={[0, Math.ceil(maxRate * 1.2)]}
                 tickFormatter={(value: number) => `${value}%`}
-                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                tick={AXIS_TICK_STYLE}
                 axisLine={false}
                 tickLine={false}
                 width={45}
@@ -160,7 +188,7 @@ export function FraudRateTrend({ data, onHourClick }: FraudRateTrendProps) {
                 yAxisId="volume"
                 orientation="right"
                 domain={[0, Math.ceil(maxVolume * 1.3)]}
-                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                tick={AXIS_TICK_STYLE}
                 axisLine={false}
                 tickLine={false}
                 width={40}
@@ -168,11 +196,7 @@ export function FraudRateTrend({ data, onHourClick }: FraudRateTrendProps) {
 
               <Tooltip
                 content={<CustomTooltip />}
-                cursor={{
-                  stroke: 'hsl(var(--muted-foreground))',
-                  strokeWidth: 1,
-                  strokeDasharray: '4 4',
-                }}
+                cursor={TOOLTIP_CURSOR_STYLE}
               />
 
               {/* Industry threshold reference line at 2% */}
@@ -183,13 +207,7 @@ export function FraudRateTrend({ data, onHourClick }: FraudRateTrendProps) {
                 strokeDasharray="6 4"
                 strokeWidth={1.5}
                 opacity={0.7}
-                label={{
-                  value: '2% threshold',
-                  position: 'insideTopRight',
-                  fill: '#ef4444',
-                  fontSize: 11,
-                  fontWeight: 500,
-                }}
+                label={REFERENCE_LABEL}
               />
 
               {/* Volume area (behind, subtle gray) */}
@@ -213,18 +231,8 @@ export function FraudRateTrend({ data, onHourClick }: FraudRateTrendProps) {
                 stroke="url(#fraudRateStroke)"
                 strokeWidth={2.5}
                 fill="url(#fraudRateGradient)"
-                dot={{
-                  r: 3,
-                  fill: 'hsl(var(--background))',
-                  stroke: '#ef4444',
-                  strokeWidth: 2,
-                }}
-                activeDot={{
-                  r: 5,
-                  fill: '#ef4444',
-                  stroke: 'hsl(var(--background))',
-                  strokeWidth: 2,
-                }}
+                dot={RATE_DOT_STYLE}
+                activeDot={RATE_ACTIVE_DOT_STYLE}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -232,4 +240,4 @@ export function FraudRateTrend({ data, onHourClick }: FraudRateTrendProps) {
       </CardContent>
     </Card>
   );
-}
+});

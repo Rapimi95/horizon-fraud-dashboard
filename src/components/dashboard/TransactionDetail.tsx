@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -23,7 +23,17 @@ import {
   Info,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Transaction } from '@/lib/types';
+import {
+  STATUS_STYLES,
+  STATUS_LABELS,
+  getRiskColor,
+  getRiskBadgeStyle,
+  getRiskLabel,
+  formatTimestamp,
+  formatTime,
+  formatAmount,
+} from '@/lib/format-utils';
+import type { Transaction, RiskFlag } from '@/lib/types';
 
 interface TransactionDetailProps {
   transaction: Transaction | null;
@@ -32,23 +42,7 @@ interface TransactionDetailProps {
   onClose: () => void;
 }
 
-const STATUS_STYLES: Record<Transaction['status'], string> = {
-  authorized: 'bg-green-100 text-green-800 border-green-300',
-  captured: 'bg-blue-100 text-blue-800 border-blue-300',
-  soft_declined: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  hard_declined: 'bg-red-100 text-red-800 border-red-300',
-  pending: 'bg-gray-100 text-gray-800 border-gray-300',
-};
-
-const STATUS_LABELS: Record<Transaction['status'], string> = {
-  authorized: 'Authorized',
-  captured: 'Captured',
-  soft_declined: 'Soft Declined',
-  hard_declined: 'Hard Declined',
-  pending: 'Pending',
-};
-
-const RISK_FLAG_EXPLANATIONS: Record<string, string> = {
+const RISK_FLAG_EXPLANATIONS: Record<RiskFlag, string> = {
   country_mismatch: "Billing, shipping, and IP countries don't match",
   high_amount: 'Transaction amount exceeds $500',
   round_amount: 'Suspicious round dollar amount',
@@ -57,58 +51,6 @@ const RISK_FLAG_EXPLANATIONS: Record<string, string> = {
   excessive_retries: 'Card has been retried multiple times',
   sequential_bin: 'Card BIN is sequential with other recent transactions',
 };
-
-function getRiskColor(score: number): string {
-  if (score >= 80) return 'bg-red-500';
-  if (score >= 60) return 'bg-orange-500';
-  if (score >= 40) return 'bg-yellow-500';
-  return 'bg-green-500';
-}
-
-function getRiskBadgeStyle(score: number): string {
-  if (score >= 80) return 'bg-red-100 text-red-800 border-red-300';
-  if (score >= 60) return 'bg-orange-100 text-orange-800 border-orange-300';
-  if (score >= 40) return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-  return 'bg-green-100 text-green-800 border-green-300';
-}
-
-function getRiskLabel(score: number): string {
-  if (score >= 80) return 'Critical';
-  if (score >= 60) return 'High';
-  if (score >= 40) return 'Medium';
-  return 'Low';
-}
-
-function formatTimestamp(timestamp: string): string {
-  const date = new Date(timestamp);
-  return date.toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-}
-
-function formatTime(timestamp: string): string {
-  const date = new Date(timestamp);
-  return date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-}
-
-function formatAmount(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -187,7 +129,7 @@ function GeoFlowDiagram({ tx }: { tx: Transaction }) {
   );
 }
 
-export default function TransactionDetail({
+export const TransactionDetail = memo(function TransactionDetail({
   transaction,
   allTransactions,
   open,
@@ -423,4 +365,4 @@ export default function TransactionDetail({
       </SheetContent>
     </Sheet>
   );
-}
+});

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import {
   ResponsiveContainer,
   ScatterChart,
@@ -22,11 +22,9 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { getDeclineRetryData } from '@/lib/fraud-detection';
-import type { Transaction } from '@/lib/types';
 
 interface DeclineRetryChartProps {
-  transactions: Transaction[];
+  retryData: RetryEntry[];
   onCardClick?: (bin: string) => void;
 }
 
@@ -97,12 +95,7 @@ function ScatterTooltipContent({ active, payload }: ScatterTooltipProps) {
   );
 }
 
-export default function DeclineRetryChart({ transactions, onCardClick }: DeclineRetryChartProps) {
-  const retryData = useMemo(
-    () => getDeclineRetryData(transactions),
-    [transactions]
-  );
-
+export const DeclineRetryChart = memo(function DeclineRetryChart({ retryData, onCardClick }: DeclineRetryChartProps) {
   const maxRetries = useMemo(
     () => Math.max(1, ...retryData.map((d) => d.retries)),
     [retryData]
@@ -120,6 +113,7 @@ export default function DeclineRetryChart({ transactions, onCardClick }: Decline
         <div className="space-y-4">
           {/* Scatter Chart */}
           {retryData.length > 0 ? (
+            <div aria-label="Decline and retry scatter chart">
             <ResponsiveContainer width="100%" height={200}>
               <ScatterChart margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
                 <XAxis
@@ -150,9 +144,9 @@ export default function DeclineRetryChart({ transactions, onCardClick }: Decline
                     onCardClick?.(entry.cardBin);
                   }}
                 >
-                  {retryData.map((entry, index) => (
+                  {retryData.map((entry) => (
                     <Cell
-                      key={`${entry.cardBin}-${entry.cardLast4}-${index}`}
+                      key={`${entry.cardBin}-${entry.cardLast4}`}
                       fill={getStatusColor(entry.lastStatus)}
                       fillOpacity={0.7}
                       stroke={getStatusColor(entry.lastStatus)}
@@ -162,6 +156,7 @@ export default function DeclineRetryChart({ transactions, onCardClick }: Decline
                 </Scatter>
               </ScatterChart>
             </ResponsiveContainer>
+            </div>
           ) : (
             <div className="flex items-center justify-center h-[200px] text-muted-foreground text-sm">
               No retry data available
@@ -186,6 +181,7 @@ export default function DeclineRetryChart({ transactions, onCardClick }: Decline
 
           {/* Table */}
           <ScrollArea className="h-[200px]">
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -205,13 +201,21 @@ export default function DeclineRetryChart({ transactions, onCardClick }: Decline
                     </TableCell>
                   </TableRow>
                 ) : (
-                  retryData.map((entry, index) => {
+                  retryData.map((entry) => {
                     const statusBadge = getStatusBadgeVariant(entry.lastStatus);
                     return (
                       <TableRow
-                        key={`${entry.cardBin}-${entry.cardLast4}-${index}`}
+                        key={`${entry.cardBin}-${entry.cardLast4}`}
                         className="cursor-pointer"
                         onClick={() => onCardClick?.(entry.cardBin)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onCardClick?.(entry.cardBin);
+                          }
+                        }}
+                        tabIndex={0}
+                        role="button"
                       >
                         <TableCell className="font-mono font-medium">
                           {entry.cardBin}
@@ -237,9 +241,10 @@ export default function DeclineRetryChart({ transactions, onCardClick }: Decline
                 )}
               </TableBody>
             </Table>
+            </div>
           </ScrollArea>
         </div>
       </CardContent>
     </Card>
   );
-}
+});

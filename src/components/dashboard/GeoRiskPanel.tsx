@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -12,11 +12,10 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { computeGeoRiskData } from '@/lib/fraud-detection';
-import type { Transaction, GeoRiskEntry } from '@/lib/types';
+import type { GeoRiskEntry } from '@/lib/types';
 
 interface GeoRiskPanelProps {
-  transactions: Transaction[];
+  geoData: GeoRiskEntry[];
   onCountryClick?: (country: string) => void;
 }
 
@@ -57,12 +56,7 @@ const RISK_BADGE_STYLES: Record<GeoRiskEntry['riskLevel'], string> = {
   low: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
 };
 
-export default function GeoRiskPanel({ transactions, onCountryClick }: GeoRiskPanelProps) {
-  const geoData = useMemo(
-    () => computeGeoRiskData(transactions),
-    [transactions]
-  );
-
+export const GeoRiskPanel = memo(function GeoRiskPanel({ geoData, onCountryClick }: GeoRiskPanelProps) {
   const mismatchCount = useMemo(
     () => geoData.filter((e) => e.mismatch).length,
     [geoData]
@@ -77,7 +71,8 @@ export default function GeoRiskPanel({ transactions, onCountryClick }: GeoRiskPa
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[400px]">
+        <ScrollArea className="h-[400px]" aria-label="Geographic risk analysis table">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -97,13 +92,21 @@ export default function GeoRiskPanel({ transactions, onCountryClick }: GeoRiskPa
                   </TableCell>
                 </TableRow>
               ) : (
-                geoData.map((entry, index) => (
+                geoData.map((entry) => (
                   <TableRow
-                    key={`${entry.billingCountry}-${entry.shippingCountry}-${entry.ipCountry}-${index}`}
+                    key={`${entry.billingCountry}-${entry.shippingCountry}-${entry.ipCountry}`}
                     className={`cursor-pointer ${
                       entry.mismatch ? 'bg-red-50 dark:bg-red-950/20' : ''
                     }`}
                     onClick={() => onCountryClick?.(entry.billingCountry)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onCountryClick?.(entry.billingCountry);
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
                   >
                     <TableCell className="font-medium">
                       {countryWithFlag(entry.billingCountry)}
@@ -127,8 +130,9 @@ export default function GeoRiskPanel({ transactions, onCountryClick }: GeoRiskPa
               )}
             </TableBody>
           </Table>
+          </div>
         </ScrollArea>
       </CardContent>
     </Card>
   );
-}
+});

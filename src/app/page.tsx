@@ -6,6 +6,7 @@ import { useFilteredTransactions } from '@/hooks/useFilteredTransactions';
 import {
   computeFraudMetrics,
   computeVelocityData,
+  computeGeoRiskData,
   getAmountDistribution,
   getTemporalData,
   getDeclineRetryData,
@@ -14,16 +15,18 @@ import { Transaction } from '@/lib/types';
 
 import { FraudOverview } from '@/components/dashboard/FraudOverview';
 import { FraudRateTrend } from '@/components/dashboard/FraudRateTrend';
-import VelocityChart from '@/components/dashboard/VelocityChart';
-import GeoRiskPanel from '@/components/dashboard/GeoRiskPanel';
-import AmountDistribution from '@/components/dashboard/AmountDistribution';
-import TemporalHeatmap from '@/components/dashboard/TemporalHeatmap';
-import DeclineRetryChart from '@/components/dashboard/DeclineRetryChart';
-import TransactionPanel from '@/components/dashboard/TransactionPanel';
-import TransactionDetail from '@/components/dashboard/TransactionDetail';
-import HistoricalPlayback from '@/components/dashboard/HistoricalPlayback';
+import { VelocityChart } from '@/components/dashboard/VelocityChart';
+import { GeoRiskPanel } from '@/components/dashboard/GeoRiskPanel';
+import { AmountDistribution } from '@/components/dashboard/AmountDistribution';
+import { TemporalHeatmap } from '@/components/dashboard/TemporalHeatmap';
+import { DeclineRetryChart } from '@/components/dashboard/DeclineRetryChart';
+import { TransactionPanel } from '@/components/dashboard/TransactionPanel';
+import { TransactionDetail } from '@/components/dashboard/TransactionDetail';
+import { HistoricalPlayback } from '@/components/dashboard/HistoricalPlayback';
 
 import { Shield, AlertTriangle } from 'lucide-react';
+
+const ROUND_AMOUNTS = [100, 250, 500, 1000];
 
 export default function DashboardPage() {
   const simulation = useRealTimeSimulation();
@@ -58,13 +61,53 @@ export default function DashboardPage() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  // Compute metrics from visible transactions
+  // Memoize ALL derived data at the orchestrator level
   const metrics = useMemo(
     () => computeFraudMetrics(visibleTransactions),
     [visibleTransactions]
   );
 
+  const velocityData = useMemo(
+    () => computeVelocityData(visibleTransactions),
+    [visibleTransactions]
+  );
+
+  const geoRiskData = useMemo(
+    () => computeGeoRiskData(visibleTransactions),
+    [visibleTransactions]
+  );
+
+  const amountDistribution = useMemo(
+    () => getAmountDistribution(visibleTransactions),
+    [visibleTransactions]
+  );
+
+  const roundNumberCount = useMemo(
+    () => visibleTransactions.filter((tx) => ROUND_AMOUNTS.includes(tx.amount)).length,
+    [visibleTransactions]
+  );
+
+  const temporalData = useMemo(
+    () => getTemporalData(visibleTransactions),
+    [visibleTransactions]
+  );
+
+  const declineRetryData = useMemo(
+    () => getDeclineRetryData(visibleTransactions),
+    [visibleTransactions]
+  );
+
   const isLive = !isPlaying && !isComplete && progress === 0;
+
+  // Derive effective selection — clears stale selection without setState in effect
+  const effectiveSelectedTransaction = useMemo(() => {
+    if (!selectedTransaction) return null;
+    return visibleTransactions.some(tx => tx.id === selectedTransaction.id)
+      ? selectedTransaction
+      : null;
+  }, [visibleTransactions, selectedTransaction]);
+
+  const effectiveDetailOpen = detailOpen && effectiveSelectedTransaction !== null;
 
   // Handlers for chart interactions → set filters
   const handleEntityClick = useCallback(
@@ -159,11 +202,11 @@ export default function DashboardPage() {
         {/* Row 3: Visualizations Grid */}
         <div className="grid gap-6 lg:grid-cols-2">
           <VelocityChart
-            transactions={visibleTransactions}
+            velocityData={velocityData}
             onEntityClick={handleEntityClick}
           />
           <GeoRiskPanel
-            transactions={visibleTransactions}
+            geoData={geoRiskData}
             onCountryClick={handleCountryClick}
           />
         </div>
@@ -171,17 +214,18 @@ export default function DashboardPage() {
         {/* Row 4: More Visualizations */}
         <div className="grid gap-6 lg:grid-cols-2">
           <AmountDistribution
-            transactions={visibleTransactions}
+            distribution={amountDistribution}
+            roundNumberCount={roundNumberCount}
           />
           <TemporalHeatmap
-            transactions={visibleTransactions}
+            temporalData={temporalData}
             onHourClick={handleHourClick}
           />
         </div>
 
         {/* Row 5: Decline/Retry Patterns */}
         <DeclineRetryChart
-          transactions={visibleTransactions}
+          retryData={declineRetryData}
           onCardClick={handleCardClick}
         />
 
@@ -197,9 +241,9 @@ export default function DashboardPage() {
 
       {/* Transaction Detail Sheet */}
       <TransactionDetail
-        transaction={selectedTransaction}
+        transaction={effectiveSelectedTransaction}
         allTransactions={visibleTransactions}
-        open={detailOpen}
+        open={effectiveDetailOpen}
         onClose={handleDetailClose}
       />
 

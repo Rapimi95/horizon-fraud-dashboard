@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import {
   ResponsiveContainer,
   BarChart,
@@ -12,11 +12,10 @@ import {
   Legend,
 } from 'recharts';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { getAmountDistribution } from '@/lib/fraud-detection';
-import type { Transaction } from '@/lib/types';
 
 interface AmountDistributionProps {
-  transactions: Transaction[];
+  distribution: { range: string; count: number; flagged: number }[];
+  roundNumberCount: number;
   onRangeClick?: (range: string) => void;
 }
 
@@ -45,14 +44,6 @@ function DistributionTooltipContent({ active, payload }: DistributionTooltipProp
   );
 }
 
-const ROUND_AMOUNTS = [100, 250, 500, 1000];
-const ROUND_AMOUNT_LABELS: Record<number, string> = {
-  100: '$100',
-  250: '$250',
-  500: '$500',
-  1000: '$1000',
-};
-
 // Map round amounts to the range labels that contain them
 const ROUND_AMOUNT_RANGES: Record<number, string> = {
   100: '$100-200',
@@ -61,12 +52,7 @@ const ROUND_AMOUNT_RANGES: Record<number, string> = {
   1000: '$1000+',
 };
 
-export default function AmountDistribution({ transactions, onRangeClick }: AmountDistributionProps) {
-  const distribution = useMemo(
-    () => getAmountDistribution(transactions),
-    [transactions]
-  );
-
+export const AmountDistribution = memo(function AmountDistribution({ distribution, roundNumberCount, onRangeClick }: AmountDistributionProps) {
   const chartData = useMemo(
     () =>
       distribution.map((d) => ({
@@ -76,16 +62,10 @@ export default function AmountDistribution({ transactions, onRangeClick }: Amoun
     [distribution]
   );
 
-  const roundNumberCount = useMemo(
-    () =>
-      transactions.filter((tx) => ROUND_AMOUNTS.includes(tx.amount)).length,
-    [transactions]
-  );
-
   // Determine which ranges have round number markers
   const roundAmountRanges = useMemo(() => {
     const ranges = new Set<string>();
-    for (const amt of ROUND_AMOUNTS) {
+    for (const amt of Object.keys(ROUND_AMOUNT_RANGES).map(Number)) {
       const range = ROUND_AMOUNT_RANGES[amt];
       if (range && distribution.some((d) => d.range === range)) {
         ranges.add(range);
@@ -95,7 +75,7 @@ export default function AmountDistribution({ transactions, onRangeClick }: Amoun
   }, [distribution]);
 
   return (
-    <Card>
+    <Card aria-label="Amount distribution chart">
       <CardHeader>
         <CardTitle>Amount Distribution</CardTitle>
         <CardDescription>
@@ -155,4 +135,4 @@ export default function AmountDistribution({ transactions, onRangeClick }: Amoun
       </CardContent>
     </Card>
   );
-}
+});

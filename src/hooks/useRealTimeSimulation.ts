@@ -1,48 +1,34 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Transaction, PlaybackSpeed } from '@/lib/types';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { PlaybackSpeed } from '@/lib/types';
 import { generateTransactions } from '@/lib/generate-data';
 
-interface SimulationState {
-  allTransactions: Transaction[];
-  visibleTransactions: Transaction[];
-  currentIndex: number;
-  isPlaying: boolean;
-  speed: PlaybackSpeed;
-  currentTime: Date | null;
-  isComplete: boolean;
-  progress: number; // 0-100
-}
-
 export function useRealTimeSimulation() {
-  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
-  const [visibleTransactions, setVisibleTransactions] = useState<Transaction[]>([]);
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  // Generate all transactions once — never changes after initial render
+  const allTransactions = useMemo(() => generateTransactions(), []);
+  const allTransactionsRef = useRef(allTransactions);
+
+  // Initialize at end of dataset (show all by default)
+  const [currentIndex, setCurrentIndex] = useState(() => allTransactions.length);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeedState] = useState<PlaybackSpeed>(1);
-  const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  const [isComplete, setIsComplete] = useState<boolean>(false);
+  const [currentTime, setCurrentTime] = useState<Date | null>(() =>
+    allTransactions.length > 0 ? new Date(allTransactions[allTransactions.length - 1].timestamp) : null
+  );
+  const [isComplete, setIsComplete] = useState(true);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const allTransactionsRef = useRef<Transaction[]>([]);
-  const currentIndexRef = useRef<number>(0);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentIndexRef = useRef(allTransactions.length);
   const speedRef = useRef<PlaybackSpeed>(1);
-  const isPlayingRef = useRef<boolean>(false);
+  const isPlayingRef = useRef(false);
 
-  // Generate all transactions once on mount and show them all by default
-  useEffect(() => {
-    const txns = generateTransactions();
-    setAllTransactions(txns);
-    allTransactionsRef.current = txns;
-    setVisibleTransactions(txns);
-    setCurrentIndex(txns.length);
-    currentIndexRef.current = txns.length;
-    if (txns.length > 0) {
-      setCurrentTime(new Date(txns[txns.length - 1].timestamp));
-    }
-    setIsComplete(true);
-  }, []);
+  // Derive visibleTransactions from allTransactions and currentIndex
+  const visibleTransactions = useMemo(
+    () => allTransactions.slice(0, currentIndex),
+    [allTransactions, currentIndex]
+  );
 
   // Compute progress as a derived value
   const progress =
@@ -56,6 +42,10 @@ export function useRealTimeSimulation() {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    if (timeoutRef.current !== null) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
   }, []);
 
   // Core tick function: adds transactions based on speed
@@ -65,12 +55,10 @@ export function useRealTimeSimulation() {
     const spd = speedRef.current;
 
     if (idx >= txns.length) {
-      // Playback complete
       clearPlaybackInterval();
       setIsPlaying(false);
       isPlayingRef.current = false;
       setIsComplete(true);
-      setVisibleTransactions(txns);
       setCurrentIndex(txns.length);
       currentIndexRef.current = txns.length;
       if (txns.length > 0) {
@@ -80,9 +68,7 @@ export function useRealTimeSimulation() {
     }
 
     const nextIndex = Math.min(idx + spd, txns.length);
-    const nextVisible = txns.slice(0, nextIndex);
 
-    setVisibleTransactions(nextVisible);
     setCurrentIndex(nextIndex);
     currentIndexRef.current = nextIndex;
     setIsComplete(nextIndex >= txns.length);
@@ -112,7 +98,6 @@ export function useRealTimeSimulation() {
 
     clearPlaybackInterval();
 
-    setVisibleTransactions([]);
     setCurrentIndex(0);
     currentIndexRef.current = 0;
     setIsComplete(false);
@@ -120,8 +105,7 @@ export function useRealTimeSimulation() {
     isPlayingRef.current = true;
     setCurrentTime(new Date(txns[0].timestamp));
 
-    // Delay starting the interval slightly to allow state to settle
-    setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       startInterval();
     }, 0);
   }, [clearPlaybackInterval, startInterval]);
@@ -151,7 +135,6 @@ export function useRealTimeSimulation() {
 
     setIsPlaying(false);
     isPlayingRef.current = false;
-    setVisibleTransactions(txns);
     setCurrentIndex(txns.length);
     currentIndexRef.current = txns.length;
     setIsComplete(true);
@@ -183,9 +166,7 @@ export function useRealTimeSimulation() {
 
       const clampedProgress = Math.max(0, Math.min(100, targetProgress));
       const targetIndex = Math.round((clampedProgress / 100) * txns.length);
-      const nextVisible = txns.slice(0, targetIndex);
 
-      setVisibleTransactions(nextVisible);
       setCurrentIndex(targetIndex);
       currentIndexRef.current = targetIndex;
       setIsComplete(targetIndex >= txns.length);

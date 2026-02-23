@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,14 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { X, Search, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  STATUS_STYLES,
+  STATUS_LABELS,
+  getRiskColor,
+  getRiskBadgeStyle,
+  formatTime,
+  formatAmount,
+} from '@/lib/format-utils';
 import type { Transaction, FilterState } from '@/lib/types';
 
 interface TransactionPanelProps {
@@ -23,54 +31,6 @@ interface TransactionPanelProps {
   onClearFilters: () => void;
   activeFilterCount: number;
   onTransactionSelect: (tx: Transaction) => void;
-}
-
-const STATUS_STYLES: Record<Transaction['status'], string> = {
-  authorized: 'bg-green-100 text-green-800 border-green-300',
-  captured: 'bg-blue-100 text-blue-800 border-blue-300',
-  soft_declined: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  hard_declined: 'bg-red-100 text-red-800 border-red-300',
-  pending: 'bg-gray-100 text-gray-800 border-gray-300',
-};
-
-const STATUS_LABELS: Record<Transaction['status'], string> = {
-  authorized: 'Authorized',
-  captured: 'Captured',
-  soft_declined: 'Soft Declined',
-  hard_declined: 'Hard Declined',
-  pending: 'Pending',
-};
-
-function getRiskColor(score: number): string {
-  if (score >= 80) return 'bg-red-500';
-  if (score >= 60) return 'bg-orange-500';
-  if (score >= 40) return 'bg-yellow-500';
-  return 'bg-green-500';
-}
-
-function getRiskBadgeStyle(score: number): string {
-  if (score >= 80) return 'bg-red-100 text-red-800 border-red-300';
-  if (score >= 60) return 'bg-orange-100 text-orange-800 border-orange-300';
-  if (score >= 40) return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-  return 'bg-green-100 text-green-800 border-green-300';
-}
-
-function formatTime(timestamp: string): string {
-  const date = new Date(timestamp);
-  return date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-}
-
-function formatAmount(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount);
 }
 
 function hasCountryMismatch(tx: Transaction): boolean {
@@ -127,7 +87,7 @@ function ActiveFilters({
   );
 }
 
-export default function TransactionPanel({
+export const TransactionPanel = memo(function TransactionPanel({
   transactions,
   filters,
   onClearFilters,
@@ -179,6 +139,7 @@ export default function TransactionPanel({
           </div>
         ) : (
           <ScrollArea className="max-h-[500px] overflow-auto rounded-md border">
+            <div className="overflow-x-auto min-w-[800px]">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
@@ -205,6 +166,14 @@ export default function TransactionPanel({
                         isHighRisk && 'border-l-2 border-l-red-400'
                       )}
                       onClick={() => onTransactionSelect(tx)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onTransactionSelect(tx);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
                     >
                       <TableCell className="text-xs font-mono py-2">
                         {formatTime(tx.timestamp)}
@@ -291,9 +260,10 @@ export default function TransactionPanel({
                 })}
               </TableBody>
             </Table>
+            </div>
           </ScrollArea>
         )}
       </CardContent>
     </Card>
   );
-}
+});

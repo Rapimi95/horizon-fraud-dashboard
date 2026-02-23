@@ -1,11 +1,13 @@
 'use client';
 
+import { memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Play, Pause, Square, RotateCcw, Clock, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PlaybackSpeed } from '@/lib/types';
+import { formatTimeFromDate } from '@/lib/format-utils';
 
 interface HistoricalPlaybackProps {
   isPlaying: boolean;
@@ -24,17 +26,7 @@ interface HistoricalPlaybackProps {
 
 const SPEED_OPTIONS: PlaybackSpeed[] = [1, 2, 5, 10];
 
-function formatTime(date: Date | null): string {
-  if (!date) return '--:--:--';
-  return date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-}
-
-export default function HistoricalPlayback({
+export const HistoricalPlayback = memo(function HistoricalPlayback({
   isPlaying,
   progress,
   speed,
@@ -195,7 +187,7 @@ export default function HistoricalPlayback({
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <Clock className="h-3.5 w-3.5 text-slate-400" />
             <span className="text-xs font-mono text-slate-200 min-w-[60px]">
-              {formatTime(currentTime)}
+              {formatTimeFromDate(currentTime)}
             </span>
           </div>
 
@@ -237,4 +229,4 @@ export default function HistoricalPlayback({
       </div>
     </div>
   );
-}
+});

@@ -1,4 +1,4 @@
-import { Transaction, TransactionStatus } from './types';
+import { Transaction, TransactionStatus, RiskFlag } from './types';
 
 // ============================================================================
 // Seeded PRNG (Mulberry32) - deterministic, browser-safe
@@ -29,11 +29,12 @@ function randFloat(min: number, max: number): number {
 }
 
 function pick<T>(arr: T[]): T {
+  if (arr.length === 0) throw new Error('pick() called on empty array');
   return arr[Math.floor(rng() * arr.length)];
 }
 
 function uuid(index: number): string {
-  const hex = (n: number, len: number) => n.toString(16).padStart(len, '0');
+  const hex = (n: number, len: number) => n.toString(16).padStart(len, '0').slice(-len);
   const a = ((index * 2654435761) >>> 0) % 0xffffffff;
   const b = ((index * 340573321) >>> 0) % 0xffff;
   const c = ((index * 1013904223) >>> 0) % 0xffff;
@@ -85,7 +86,7 @@ const SUSPICIOUS_IPS = [
 const NORMAL_BINS = [
   '454212', '521345', '378912', '401288', '535678', '424242',
   '456789', '512345', '400012', '543210', '467890', '501234',
-  '410020', '530011', '445566', '512345', '400555', '553344',
+  '410020', '530011', '445566', '400555', '553344',
 ];
 
 const FRAUD_SHIPPING_COUNTRIES = ['MY', 'TH', 'VN', 'PH'];
@@ -150,7 +151,7 @@ function isDisposableEmail(email: string): boolean {
 }
 
 function isRoundNumber(amount: number): boolean {
-  return amount === 100 || amount === 250 || amount === 500 || amount === 1000 || amount % 100 === 0;
+  return amount === 250 || amount % 100 === 0;
 }
 
 // ============================================================================
@@ -159,10 +160,10 @@ function isRoundNumber(amount: number): boolean {
 function computeRiskScore(
   tx: Omit<Transaction, 'riskScore' | 'riskFlags'>,
   ipCounts: Map<string, number>,
-  allBins: string[]
-): { riskScore: number; riskFlags: string[] } {
+  allBinNumbers: Set<number>
+): { riskScore: number; riskFlags: RiskFlag[] } {
   let score = randInt(5, 20);
-  const flags: string[] = [];
+  const flags: RiskFlag[] = [];
 
   // Country mismatch
   if (
@@ -207,11 +208,7 @@ function computeRiskScore(
 
   // Sequential BIN detection
   const binNum = parseInt(tx.cardBin, 10);
-  const hasSequentialNeighbor = allBins.some((b) => {
-    const n = parseInt(b, 10);
-    return b !== tx.cardBin && Math.abs(n - binNum) === 1;
-  });
-  if (hasSequentialNeighbor) {
+  if (allBinNumbers.has(binNum + 1) || allBinNumbers.has(binNum - 1)) {
     score += 20;
     flags.push('sequential_bin');
   }
@@ -500,12 +497,12 @@ export function generateTransactions(): Transaction[] {
     ipCounts.set(tx.customerIp, (ipCounts.get(tx.customerIp) || 0) + 1);
   }
 
-  // Collect all BINs for sequential detection
-  const allBins = allRaw.map((tx) => tx.cardBin);
+  // Collect all BINs for sequential detection (O(1) lookup)
+  const allBinNumbers = new Set(allRaw.map((tx) => parseInt(tx.cardBin, 10)));
 
   // Compute risk scores and flags
   const transactions: Transaction[] = allRaw.map((tx) => {
-    const { riskScore, riskFlags } = computeRiskScore(tx, ipCounts, allBins);
+    const { riskScore, riskFlags } = computeRiskScore(tx, ipCounts, allBinNumbers);
     return { ...tx, riskScore, riskFlags };
   });
 

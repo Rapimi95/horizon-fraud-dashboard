@@ -1,17 +1,15 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import {
   Tooltip as ShadTooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { getTemporalData } from '@/lib/fraud-detection';
-import type { Transaction } from '@/lib/types';
 
 interface TemporalHeatmapProps {
-  transactions: Transaction[];
+  temporalData: { hour: number; total: number; flagged: number; rate: number }[];
   onHourClick?: (hour: number) => void;
 }
 
@@ -52,12 +50,7 @@ function formatHour(hour: number): string {
   return `${hour - 12}p`;
 }
 
-export default function TemporalHeatmap({ transactions, onHourClick }: TemporalHeatmapProps) {
-  const temporalData = useMemo(
-    () => getTemporalData(transactions),
-    [transactions]
-  );
-
+export const TemporalHeatmap = memo(function TemporalHeatmap({ temporalData, onHourClick }: TemporalHeatmapProps) {
   const peakHours = useMemo(() => {
     if (temporalData.length === 0) return new Set<number>();
     const maxRate = Math.max(...temporalData.map((d) => d.rate));
@@ -75,7 +68,7 @@ export default function TemporalHeatmap({ transactions, onHourClick }: TemporalH
   const bottomRow = temporalData.slice(12, 24);
 
   return (
-    <Card>
+    <Card aria-label="Fraud density heatmap by hour">
       <CardHeader>
         <CardTitle>Fraud Density by Hour</CardTitle>
         <CardDescription>
@@ -152,4 +145,4 @@ export default function TemporalHeatmap({ transactions, onHourClick }: TemporalH
       </CardContent>
     </Card>
   );
-}
+});

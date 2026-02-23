@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { memo, useMemo, useCallback } from 'react';
 import {
   ResponsiveContainer,
   BarChart,
@@ -12,11 +12,10 @@ import {
 } from 'recharts';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { computeVelocityData } from '@/lib/fraud-detection';
-import type { Transaction, VelocityEntry } from '@/lib/types';
+import type { VelocityEntry } from '@/lib/types';
 
 interface VelocityChartProps {
-  transactions: Transaction[];
+  velocityData: VelocityEntry[];
   onEntityClick?: (type: 'ip' | 'email' | 'bin', key: string) => void;
 }
 
@@ -119,11 +118,7 @@ function TabChart({
   );
 }
 
-export default function VelocityChart({ transactions, onEntityClick }: VelocityChartProps) {
-  const velocityData = useMemo(
-    () => computeVelocityData(transactions),
-    [transactions]
-  );
+export const VelocityChart = memo(function VelocityChart({ velocityData, onEntityClick }: VelocityChartProps) {
 
   const ipData = useMemo(
     () => velocityData.filter((e) => e.type === 'ip').slice(0, 10),
@@ -141,7 +136,7 @@ export default function VelocityChart({ transactions, onEntityClick }: VelocityC
   );
 
   return (
-    <Card>
+    <Card aria-label="Velocity analysis chart">
       <CardHeader>
         <CardTitle>Velocity Analysis</CardTitle>
         <CardDescription>Transaction frequency by entity</CardDescription>
@@ -166,4 +161,4 @@ export default function VelocityChart({ transactions, onEntityClick }: VelocityC
       </CardContent>
     </Card>
   );
-}
+});

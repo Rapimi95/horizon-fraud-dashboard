@@ -1,5 +1,16 @@
 export type TransactionStatus = 'authorized' | 'captured' | 'soft_declined' | 'hard_declined' | 'pending';
 
+export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
+
+export type RiskFlag =
+  | 'country_mismatch'
+  | 'high_amount'
+  | 'round_amount'
+  | 'high_velocity_ip'
+  | 'disposable_email'
+  | 'excessive_retries'
+  | 'sequential_bin';
+
 export interface Transaction {
   id: string;
   timestamp: string;
@@ -17,7 +28,7 @@ export interface Transaction {
   merchantName: string;
   retryCount: number;
   riskScore: number;
-  riskFlags: string[];
+  riskFlags: RiskFlag[];
   shipmentType: 'domestic' | 'cross_border';
   description: string;
 }
@@ -40,7 +51,7 @@ export interface VelocityEntry {
   totalAmount: number;
   uniqueCards: number;
   countries: string[];
-  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  riskLevel: RiskLevel;
 }
 
 export interface GeoRiskEntry {
@@ -50,7 +61,7 @@ export interface GeoRiskEntry {
   count: number;
   totalAmount: number;
   mismatch: boolean;
-  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  riskLevel: RiskLevel;
 }
 
 export interface FilterState {
@@ -59,7 +70,7 @@ export interface FilterState {
   selectedBin?: string;
   selectedCountry?: string;
   selectedHour?: number;
-  riskLevel?: 'low' | 'medium' | 'high' | 'critical';
+  riskLevel?: RiskLevel;
   status?: TransactionStatus;
   searchQuery?: string;
 }

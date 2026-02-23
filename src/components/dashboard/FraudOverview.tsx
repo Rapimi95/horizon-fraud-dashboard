@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import { memo } from 'react';
 import { FraudMetrics } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import {
   TrendingUp,
   TrendingDown,
 } from 'lucide-react';
+import { formatCurrency, formatNumber } from '@/lib/format-utils';
 
 interface FraudOverviewProps {
   metrics: FraudMetrics;
@@ -38,20 +39,7 @@ function getPendingBorderGradient(count: number): string {
   return 'border-blue-500/20 shadow-blue-500/5 shadow-sm';
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat('en-US').format(value);
-}
-
-export function FraudOverview({ metrics, isLive }: FraudOverviewProps) {
+export const FraudOverview = memo(function FraudOverview({ metrics, isLive }: FraudOverviewProps) {
   const fraudRateDelta = metrics.currentFraudRate - metrics.previousFraudRate;
   const isFraudRateUp = fraudRateDelta > 0;
   const isCrisis = metrics.currentFraudRate > 10;
@@ -207,4 +195,4 @@ export function FraudOverview({ metrics, isLive }: FraudOverviewProps) {
       </Card>
     </div>
   );
-}
+});
