@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Horizon Logistics - Real-Time Fraud Risk Dashboard
 
-## Getting Started
+Emergency fraud monitoring dashboard for Horizon Logistics' risk operations team, built to detect and investigate a coordinated fraud attack that spiked fraud rates from 0.8% to 14.2%.
 
-First, run the development server:
+## Quick Start
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) (or the next available port).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Embedded Fraud Patterns
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The dataset contains **600+ transactions** over a 24-hour period with 5 embedded fraud patterns:
 
-## Learn More
+1. **IP Velocity Attack** (Hour 14:00-14:30): 18 transactions from IP `103.45.67.89` using different cards and disposable emails, all shipping to Malaysia/Thailand/Vietnam
+2. **Sequential Card BINs** (Hours 13-15): 12 transactions with BINs 411111-411122, all shipping to Malaysia from varied billing countries, IP from Romania/Ukraine
+3. **High-Value Country Mismatch** (Hours 12-16): 10 transactions $800-$2,500 with billing from Brazil/Nigeria/Ghana, shipping to Southeast Asia, IP from Eastern Europe
+4. **Soft Decline Retries** (Hours 13-16): 6 cards retried 3-5 times each within 5-minute windows, mixing soft declines with eventual authorizations
+5. **Round Number Spike** (Hours 15-17): 15 transactions of exactly $100/$250/$500/$1,000 concentrated in a 2-hour window
 
-To learn more about Next.js, take a look at the following resources:
+## Requirements Completed
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Req 1 - Real-Time Fraud Overview**: 4 KPI cards showing fraud rate (color-coded with crisis indicator), pending reviews, transaction volume, and total value. Live indicator and fraud alert banner when rate exceeds 10%.
+- **Req 2 - Pattern Detection Visualizations** (6 interactive charts):
+  - Fraud Rate Trend: 24h area chart with dual Y-axis (rate + volume) and 2% threshold line
+  - Velocity Analysis: Tabbed bar charts for top IPs, emails, and card BINs
+  - Geographic Risk: Country mismatch table with flag emojis and risk badges
+  - Amount Distribution: Stacked histogram highlighting flagged transactions
+  - Temporal Heatmap: Hour-of-day fraud density grid with peak-hour pulse animation
+  - Decline & Retry Patterns: Scatter plot + table showing retry behavior
+- **Req 3 - Transaction Investigation** (Stretch): Click any chart element to filter transactions. Slide-out detail panel shows risk assessment, geographic flow visualization, and related transactions.
+- **Req 4 - Historical Playback** (Stretch): Bottom control bar with play/pause/stop, speed control (1x-10x), progress slider, and time display. Replays the 24-hour attack timeline.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Technical Decisions
 
-## Deploy on Vercel
+- **Next.js 14 + App Router**: Server-side rendering with client-side interactivity
+- **shadcn/ui**: Consistent, accessible component library for Cards, Tables, Sheets, Tabs
+- **Recharts**: Declarative charting with interactive tooltips and click handlers
+- **Deterministic data generation**: Seeded PRNG (Mulberry32) ensures identical dataset on every load
+- **Dark theme by default**: Optimized for SOC/NOC monitoring environments
+- **Cross-chart filtering**: Clicking any visualization element filters the transaction investigation panel
+- **Client-side simulation**: All data generated in-browser, no backend needed
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Tech Stack
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Next.js 14, TypeScript, Tailwind CSS, shadcn/ui, Recharts, date-fns, Lucide React
